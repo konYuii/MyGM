@@ -22,6 +22,12 @@ namespace frame
 
     template <typename T>
     std::vector<glm::vec3> computeSingleFrame2(const tinynurbs::RationalCurve<T> &curve, const T &u_param);
+
+    template <typename T>
+    void computeFrames3(std::vector<std::vector<glm::vec3>> &frames, const tinynurbs::RationalCurve<T> &curve, const std::vector<T> &u_params);
+
+    template <typename T>
+    std::vector<glm::vec3> computeSingleFrame3(const tinynurbs::RationalCurve<T> &curve, const T &u_param);
 }
 
 #endif

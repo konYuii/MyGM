@@ -22,13 +22,19 @@ namespace sweptsurface
     template <typename T>
     tinynurbs::RationalSurface<T> GenerateSweptSurface1(const tinynurbs::RationalCurve<T> &contour,
                                                         const tinynurbs::RationalCurve<T> &trace,
-                                                        std::function<glm::mat4(T)> shape_controller);
+                                                        std::function<glm::mat4(T)> shape_controller,
+                                                        std::vector<T> &v_bar,
+                                                        std::vector<tinynurbs::RationalCurve<T>> &profile_curves,
+                                                        std::vector<std::vector<glm::vec3>> &frames);
 
     template <typename T>
     tinynurbs::RationalSurface<T> GenerateSweptSurface2(const tinynurbs::RationalCurve<T> &contour,
                                                         const tinynurbs::RationalCurve<T> &trace,
-                                                        std::function<glm::mat4(T)> shape_controller);
-    
+                                                        std::function<glm::mat4(T)> shape_controller, 
+                                                        std::vector<T> &v_bar,
+                                                        std::vector<tinynurbs::RationalCurve<T>> &profile_curves,
+                                                        std::vector<std::vector<glm::vec3>> &frames);
+
     template <typename T>
     tinynurbs::RationalSurface<T> GenerateSweptSurface3(const tinynurbs::RationalCurve<T> &contour,
                                                         const tinynurbs::RationalCurve<T> &trace,
