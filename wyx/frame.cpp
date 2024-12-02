@@ -196,7 +196,7 @@ namespace frame {
     template <typename T>
     std::vector<glm::vec3> computeSingleFrame3(const tinynurbs::RationalCurve<T> &curve, const T &u_param)
     {
-        if(u_param * u_param < 1e-12)
+        if(u_param < 1e-10)
             return frames_saved[0].first;
 
         std::vector<glm::vec3> frame(3);

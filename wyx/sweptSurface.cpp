@@ -94,7 +94,11 @@ namespace sweptsurface
 
     template <typename T>
     tinynurbs::RationalSurface<T> GenerateSweptSurface0(const tinynurbs::RationalCurve<T> &contour,
-                                                        const tinynurbs::RationalCurve<T> &trace)
+                                                        const tinynurbs::RationalCurve<T> &trace,
+                                                        std::function<glm::mat4(T)> shape_controller,
+                                                        std::vector<T> &v_bar,
+                                                        std::vector<tinynurbs::RationalCurve<T>> &profile_curves,
+                                                        std::vector<std::vector<glm::vec3>> &frames)
     {
         int n = contour.control_points.size() - 1;
         int m = trace.control_points.size() - 1;
@@ -126,6 +130,13 @@ namespace sweptsurface
     {
         int n = contour.control_points.size() - 1;
         int m = trace.control_points.size() - 1;
+
+        v_bar.resize(m + 1);
+        for(int j=0;j<=m;j++)
+            v_bar[j] = float(j) / float(m);     
+        frame::computeFrames3(frames, trace, v_bar);
+        GenerateProfileCurves(profile_curves, contour, trace, shape_controller, v_bar, frames);
+
         std::vector<std::vector<glm::vec<3, T>>> surf_points(n + 1, std::vector<glm::vec<3, T>>(m + 1));
         float u_step = 1.0f / (n);
         float v_step = 1.0f / (m);
@@ -133,35 +144,16 @@ namespace sweptsurface
         {
             for (int j = 0; j <= m; j++)
             {
-                std::vector<glm::vec3> frame = frame::computeSingleFrame1(trace, v_step * j);  
-                glm::vec<4, T> tmp_p = frame::getInverseFrameMatrix(frame) * shape_controller(v_step * j) * frame::getFrameMatrix(frame) * glm::vec4(myBasis::curvePoint(contour, u_step * i), 1.0f);              
-                // glm::vec<3, T> tmp_p = glm::vec3(frame::getInverseFrameMatrix(std::move(frame::computeFrame1(trace, v_step * j))) * shape_controller(v_step * j) * glm::vec4(myBasis::curvePoint(contour, u_step * i), 1.0f));
-                // glm::vec<3, T> tmp_p = glm::vec3(shape_controller(v_step * j) * glm::vec4(myBasis::curvePoint(contour, u_step * i), 1.0f));
-                // glm::vec<3, T> tmp_p = myBasis::curvePoint(contour, u_step * i);
+                std::vector<glm::vec3> frame = frame::computeSingleFrame3(trace, v_step * j);               
+                std::vector<glm::vec3> frame0 = frames[0];
+                glm::vec<4, T> tmp_p = frame::getInverseFrameMatrix(frame) *
+                                       shape_controller(v_step * j) *
+                                       frame::getFrameMatrix(frame0) *
+                                       glm::vec4(myBasis::curvePoint(contour, u_step * i), 1.0f);
                 glm::vec<3, T> p = glm::vec<3, T>(tmp_p/tmp_p.w) + myBasis::curvePoint(trace, v_step * j);
                 surf_points[i][j] = p;
-                //std::cout << p[0] << " " << p[1] << " " << p[2] << std::endl;
             }
 
-            // if(i)
-            // {
-            //     int ind = 0;
-            //     T min_dis = glm::distance(surf_points[i][0], surf_points[i-1][0]);
-            //     for(int j=1;j<=m;j++)
-            //     {
-            //         T dis = glm::distance(surf_points[i][j], surf_points[i-1][0]);
-            //         if(dis < min_dis)
-            //         {
-            //             min_dis = dis;
-            //             ind = j;
-            //         }
-            //     }
-            //     std::vector<glm::vec<3, T>> tmp_points(m + 1);
-            //     for(int j=0;j<=m;j++)
-            //         tmp_points[j] = surf_points[i][(j + ind) % (m + 1)];
-            //     for(int j=0;j<=m;j++)
-            //         surf_points[i][j] = tmp_points[j];
-            // }
         }
         // 利用数据点插值曲面
         tinynurbs::RationalSurface<T> surf;
@@ -170,26 +162,23 @@ namespace sweptsurface
         // 确定参数值 9.6
         std::vector<T> u_params(n + 1), v_params(m + 1);
         SurfMeshParams(n, m, surf_points, u_params, v_params);
-        for (int i = 0; i < u_params.size(); i++)
-            std::cout << u_params[i] << " ";
-        std::cout << std::endl;
-        for (int i = 0; i < v_params.size(); i++)
-            std::cout << v_params[i] << " ";
-        std::cout << std::endl;
-        v_bar = v_params;
-        frame::computeFrames1(frames, trace, v_bar);
-        GenerateProfileCurves(profile_curves, contour, trace, shape_controller, v_bar, frames);
+        // for (int i = 0; i < u_params.size(); i++)
+        //     std::cout << u_params[i] << " ";
+        // std::cout << std::endl;
+        // for (int i = 0; i < v_params.size(); i++)
+        //     std::cout << v_params[i] << " ";
+        // std::cout << std::endl;
 
         // 确定节点向量 9.8
         std::vector<T> u_knotvector(n + 2 + surf.degree_u), v_knotvector(m + 2 + surf.degree_v);
         GenerateKnotVector(u_knotvector, u_params, surf.degree_u, n);
         GenerateKnotVector(v_knotvector, v_params, surf.degree_v, m);
-        for (int i = 0; i < u_knotvector.size(); i++)
-            std::cout << u_knotvector[i] << " ";
-        std::cout << std::endl;
-        for (int i = 0; i < v_knotvector.size(); i++)
-            std::cout << v_knotvector[i] << " ";
-        std::cout << std::endl;
+        // for (int i = 0; i < u_knotvector.size(); i++)
+        //     std::cout << u_knotvector[i] << " ";
+        // std::cout << std::endl;
+        // for (int i = 0; i < v_knotvector.size(); i++)
+        //     std::cout << v_knotvector[i] << " ";
+        // std::cout << std::endl;
         surf.knots_u = u_knotvector;
         surf.knots_v = v_knotvector;
 
@@ -294,8 +283,11 @@ namespace sweptsurface
                 std::vector<glm::vec3> frame = frame::computeSingleFrame3(trace, (float)j / m);
                 std::vector<glm::vec3> frame0 = frames[0];
                 std::vector<glm::vec3> ts = myBasis::curveDerivatives(trace, 2, (float)j / m);
-                std::vector<glm::vec3> frenet_frame = frame::computeSingleFrame1(trace, (float)j / m);                
-                glm::vec<3, T> V1 = glm::vec3(frame::getInverseFrameMatrix(frame) * frame::getFrameMatrix(frame0) * glm::vec4(contour.control_points[i], 1.0f));
+                std::vector<glm::vec3> frenet_frame = frame::computeSingleFrame1(trace, (float)j / m);
+                glm::vec<3, T> V1 = glm::vec3(frame::getInverseFrameMatrix(frame) *
+                                              shape_controller((float)j / m) *
+                                              frame::getFrameMatrix(frame0) *
+                                              glm::vec4(contour.control_points[i], 1.0f));
                 // std::cout<<"V1: "<<V1[0]<<" "<<V1[1]<<" "<<V1[2]<<std::endl;
                 T vn = glm::dot(frenet_frame[0], V1);
                 T vb = glm::dot(frenet_frame[1], V1);
@@ -438,7 +430,12 @@ namespace sweptsurface
 
     template void GenerateKnotVector(std::vector<float> &knotvector, std::vector<float> &params, int p, int n);
 
-    template tinynurbs::RationalSurface<float> GenerateSweptSurface0(const tinynurbs::RationalCurve<float> &contour, const tinynurbs::RationalCurve<float> &trace);
+    template tinynurbs::RationalSurface<float> GenerateSweptSurface0(const tinynurbs::RationalCurve<float> &contour,
+                                                                     const tinynurbs::RationalCurve<float> &trace,
+                                                                     std::function<glm::mat4(float)> shape_controller,
+                                                                     std::vector<float> &v_bar,
+                                                                     std::vector<tinynurbs::RationalCurve<float>> &profile_curves,
+                                                                     std::vector<std::vector<glm::vec3>> &frames);
 
     template tinynurbs::RationalSurface<float> GenerateSweptSurface1(const tinynurbs::RationalCurve<float> &contour,
                                                                      const tinynurbs::RationalCurve<float> &trace,
